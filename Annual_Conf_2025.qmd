@@ -75,6 +75,17 @@ set.color.theme(
 ) # プロット用カラーテーマ
 ```
 
+```{r truetheme, include=FALSE}
+theme_set(
+  theme_midr("y") +
+  theme(
+    panel.background = element_rect(fill = "transparent", color = NA),
+    panel.grid.minor = element_line(color = NA),
+    panel.grid.magor = element_line(color = NA)
+  )
+)
+```
+
 ## データを読み込む
 
 このデモでは ["Insurance Data for Homeowners and Motor Insurance Customers Monitored over Five Years"](https://data.mendeley.com/datasets/vfchtm5y7j/1) （以下、「スペインデータ」）を使用します。
