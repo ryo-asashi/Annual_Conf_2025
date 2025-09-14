@@ -33,7 +33,7 @@ lang: ja
 **midr** パッケージのリリース版は[CRAN](https://cran.r-project.org/)からインストール可能です。
 
 ``` r
-install.packages("midr") # 0.5.1
+install.packages("midr") # 0.5.2
 ```
 
 また、最新の開発版は[GitHub](https://github.com/)からインストール可能です。
@@ -79,9 +79,8 @@ set.color.theme(
 theme_set(
   theme_midr("y") +
   theme(
-    panel.background = element_rect(fill = "transparent", color = NA),
-    panel.grid.minor = element_line(color = NA),
-    panel.grid.magor = element_line(color = NA)
+    plot.background = element_rect(fill = "transparent", color = NA),
+    panel.background = element_rect(fill = "transparent", color = NA)
   )
 )
 ```
