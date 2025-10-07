@@ -80,7 +80,9 @@ theme_set(
   theme_midr("y") +
   theme(
     plot.background = element_rect(fill = "transparent", color = NA),
-    panel.background = element_rect(fill = "transparent", color = NA)
+    panel.background = element_rect(fill = "transparent", color = NA),
+    legend.background = element_rect(fill = "transparent", color = NA),
+    legend.key = element_rect(fill = "transparent", color = NA)
   )
 )
 ```
@@ -336,7 +338,9 @@ grid.arrange(grobs = p, ncol = 6)
 解釈モデルの正確性を確認するために、ロジスティック回帰モデルに対する`stats::termplot()`関数の出力と比較します。
 
 ```{r, fig.width=12, fig.height=6, out.width="100%", fig.align="center"}
-knitr::include_graphics("image/termplot.png")
+#knitr::include_graphics("image/termplot.png")
+par.midr(mfrow=c(3, 6))
+termplot(mid_glm)
 ```
 
 ## ロジスティック回帰モデルの特徴量重要度を確認する
@@ -524,13 +528,20 @@ mbd <- mid.breakdown(mid_rf, row = 10L)
 ggmid(mbd, theme = "taikai@q")
 ```
 
-## 解釈モデルをチューニングする（発展）
+## tidymodels のエコシステムで midr を利用する（参考）
 
-解釈モデルの柔軟性を決める`k`や`lambda`はハイパーパラメーターであり、以下の方法を用いて自動でチューニングすることも可能です。
+**midnight**パッケージをインストールすると、**parsnip**パッケージが提供する枠組みの中でMIDによる解釈モデルを構築することが可能になります。
 
-- **reticulate**パッケージを用いてRの中でPythonを実行し、**optuna**などの高性能なハイパーパラメータチューニング用ライブラリを利用する
-- **parsnip**で解釈モデルを実装して**tune**のパラメータチューニング機能を利用する（この目的のパッケージ**midnight**を開発予定）
+これによって、**tune**パッケージのパラメータチューニング機能など、**tidymodels**が提供する様々な機能を利用できます。
 
-```{r, echo=FALSE, out.width="50%", fig.align="center"}
+```{r, echo=FALSE, out.width="65%", fig.align="center"}
 knitr::include_graphics("image/hexlogos.png")
+```
+
+## scikit-learn のエコシステムで midr を利用する（参考）
+
+Pythonでも、**pyramid-learn**ライブラリを通じて**midr**の機能を利用すれば、**scikit-learn**ライブラリのエコシステムに準拠したインターフェースを持つ様々なモデルを解釈することが可能です。
+
+```{r, echo=FALSE, out.width="100%", fig.align="center"}
+knitr::include_graphics("image/pyramid-learn.png")
 ```
