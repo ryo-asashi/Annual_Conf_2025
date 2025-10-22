@@ -249,28 +249,30 @@ logloss(df_valid$Retention == 1, preds_glm) # 予測モデルの評価値
 
 予測値と正解ラベルをもとに較正プロットとヒストグラムを描きます。
 
-予測確率が0.4未満の群で（おそらく群に含まれる契約件数の少なさにも起因して）実績更新率と予測確率に差があることを除けば、実績の更新率は予測確率におおむね対応しています。
+予測確率が一番低かったグループで予測確率と実績更新率にわずかに差があることを除けば、予測確率と更新率はほとんど整合しています。
 
-```{r glm_calib, fig.width = 8, fig.height = 3.5, out.width = "90%", fig.align="center"}
+```{r glm_calib, fig.width = 8, fig.height = 3.5, out.width = "90%", fig.align="center", warning=FALSE}
 # Calibration Plot
 results_glm <- data.frame(actual = as.numeric(df_valid$Retention == 1),
                           pred = preds_glm)
-calibration_data <- results_glm %>%
-  mutate(bin = cut(pred, seq(0, 1, by = 0.1), include.lowest = TRUE)) %>%
+calibration_glm <- results_glm %>%
+  mutate(bin = cut(pred, quantile(preds_glm, seq(0, 1, by = 0.2)), include.lowest = TRUE)) %>%
   group_by(bin) %>%
   summarize(n = n(), mean_pred = mean(pred), mean_actual = mean(actual)) %>%
   filter(n > 0)
 grid.arrange(nrow = 1, widths = c(4, 5),
-  ggplot(calibration_data, aes(x = mean_pred, y = mean_actual)) +
+  ggplot(calibration_glm, aes(x = mean_pred, y = mean_actual)) +
     geom_point(size = 3, col = color.theme("taikai_r")$palette(1)) +
     geom_line(col = color.theme("taikai_r")$palette(1)) +
     geom_abline(slope = 1, intercept = 0, linetype = 2) +
     labs(x = "Average Predicted Probability",
-         y = "Actual Retention Rate"),
+         y = "Actual Retention Rate") +
+    lims(x = c(0, 1), y = c(0, 1)),
   ggplot(df_valid) +
     geom_histogram(aes(x = preds_glm, fill = Retention), bins = 30) +
     scale_fill_theme("taikai@q?alpha=.8", name = "Retention") +
-    labs(x = "Predicted Probability", y = "Count")
+    labs(x = "Predicted Probability", y = "Count") +
+    lims(x = c(0, 1))
 )
 ```
 
@@ -395,28 +397,48 @@ logloss(df_valid$Retention == 1, preds_rf) # 0.5353356...
 
 予測値と正解ラベルをもとに較正プロットとヒストグラムを描きます。
 
-予測確率が0.4以上0.6未満の各群で実績更新率と予測確率に差があるものの、その他の群では実績と予測はよく対応しています。
+GLM よりメリハリのある予測を行っており、一番予測確率が低かったグループを除けば実績と予測はよく対応しています。
 
-```{r rf_calib, fig.width = 8, fig.height = 3.5, out.width = "90%", fig.align="center"}
+```{r rf_calib, fig.width = 8, fig.height = 3.5, out.width = "90%", fig.align="center", warning=FALSE}
 # Calibration Plot
 results_rf <- data.frame(actual = as.numeric(df_valid$Retention == 1),
                          pred = preds_rf)
-calibration_data <- results_rf %>%
-  mutate(bin = cut(pred, seq(0, 1, by = 0.1), include.lowest = TRUE)) %>%
+calibration_rf <- results_rf %>%
+  mutate(bin = cut(pred, quantile(preds_rf, seq(0, 1, by = 0.2)), include.lowest = TRUE)) %>%
   group_by(bin) %>%
   summarize(n = n(), mean_pred = mean(pred), mean_actual = mean(actual)) %>%
   filter(n > 0)
 grid.arrange(nrow = 1, widths = c(4, 5),
-  ggplot(calibration_data, aes(x = mean_pred, y = mean_actual)) +
-    geom_point(size = 3, col = color.theme("taikai_r")$palette(1)) +
-    geom_line(col = color.theme("taikai_r")$palette(1)) +
+  ggplot() +
+    geom_point(
+      aes(x = mean_pred, y = mean_actual, shape = "glm"),
+      size = 3,
+      data = calibration_glm
+    ) +
+    geom_point(
+      aes(x = mean_pred, y = mean_actual, shape = "rf"),
+      size = 3, col = color.theme("taikai_r")$palette(1),
+      data = calibration_rf
+    ) +
+    geom_line(
+      aes(x = mean_pred, y = mean_actual),
+      col = color.theme("taikai_r")$palette(1),
+      data = calibration_rf
+    ) +
     geom_abline(slope = 1, intercept = 0, linetype = 2) +
     labs(x = "Average Predicted Probability",
-         y = "Actual Retention Rate"),
+         y = "Actual Retention Rate") +
+    lims(x = c(0, 1), y = c(0, 1)) +
+    scale_shape_manual(values = c(1, 16), name = "model") +
+    theme(
+      legend.position = c(0.95, 0.05), # x=右端から5%, y=下端から5%の位置
+      legend.justification = c("right", "bottom") # 凡例の右下隅を基準点にする
+    ),
   ggplot(df_valid) +
     geom_histogram(aes(x = preds_rf, fill = Retention), bins = 30) +
     scale_fill_theme("taikai@q?alpha=.8", name = "Retention") +
-    labs(x = "Predicted Probability", y = "Count")
+    labs(x = "Predicted Probability", y = "Count") +
+    lims(x = c(0, 1))
 )
 ```
 
@@ -530,17 +552,19 @@ ggmid(mbd, theme = "taikai@q")
 
 ## tidymodels のエコシステムで midr を利用する（参考）
 
-**midnight**パッケージをインストールすると、**parsnip**パッケージが提供する枠組みの中でMIDによる解釈モデルを構築することが可能になります。
+**midnight**パッケージをインストールすると、**parsnip**パッケージが提供する枠組みの中でMIDによる解釈モデルを構築することが可能になります。これによって、**tune**パッケージのパラメータチューニング機能など、**tidymodels**が提供する様々な機能を利用できます。
 
-これによって、**tune**パッケージのパラメータチューニング機能など、**tidymodels**が提供する様々な機能を利用できます。
+**midnight** : [https://ryo-asashi.github.io/midnight/](https://ryo-asashi.github.io/midnight/)
 
-```{r, echo=FALSE, out.width="65%", fig.align="center"}
+```{r, echo=FALSE, out.width="55%", fig.align="center"}
 knitr::include_graphics("image/hexlogos.png")
 ```
 
 ## scikit-learn のエコシステムで midr を利用する（参考）
 
 Pythonでも、**pyramid-learn**ライブラリを通じて**midr**の機能を利用すれば、**scikit-learn**ライブラリのエコシステムに準拠したインターフェースを持つ様々なモデルを解釈することが可能です。
+
+**pyramid-learn** : [https://ryo-asashi.github.io/pyramid-learn/](https://ryo-asashi.github.io/pyramid-learn/)
 
 ```{r, echo=FALSE, out.width="100%", fig.align="center"}
 knitr::include_graphics("image/pyramid-learn.png")
